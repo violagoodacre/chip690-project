@@ -2,7 +2,6 @@ var client = FHIR.client("https://r3.smarthealthit.org");
 // console.log(client);
 
 
-
 /*
 * Parameters:
 *   containerId: type: string - prepended id of container where the control is to be rendered.
@@ -23,18 +22,21 @@ function createComboBox(containerId, label, optionsList, handleSelection) {
       </div>`;
     $(`#${containerId}`).html(html);
 
-    // NOTE: CoPilot helped me with knowing how to map the fields
+    // NOTE: CoPilot helped me debug the autocomplete to make it more efficient
+
+    const formattedOptions = optionsList.map(item => ({
+        label: item.display,
+        value: item.display,
+        data: item.data
+    }));
+
     $(`#${inputId}`).autocomplete({
         source: function(request, response) {
-            const formattedOptions = optionsList.map(item => ({
-                label: item.display,
-                value: item.display,
-                data: item.data
-            }));
-            response(formattedOptions);
+            const results = $.ui.autocomplete.filter(formattedOptions, request.term);
+            response(results);
         },
-
         minLength: 0,
+        delay: 300,
         select: function(event, ui) {  // handle when an item is selected
             const selectedItem = {display: ui.item.value, data: ui.item.data};
             handleSelection(selectedItem); // callback
@@ -42,17 +44,16 @@ function createComboBox(containerId, label, optionsList, handleSelection) {
         }
     }).css("width", "200px");
 
+    // TODO: this is not working -- need to debug it
     $(`#${inputId}`).on('click', function () {
         $(`#${inputId}`).focus().autocomplete('search', '');
     });
 }
 
 
-
 function displayPatientTestResults(patient_test_results){
+    // console.log(patient_test_results);
     document.getElementById('vis_container').innerHTML = ''; // clear existing chart
-
-    console.log(patient_test_results);
 
     const series_data = patient_test_results.map(item => [item.datetime, item.value]);
 
@@ -160,7 +161,6 @@ function displayPatientTestResults(patient_test_results){
 }
 
 
-
 /*
 * Parameters:
 *   observation: type object - a FHIR observation object
@@ -183,7 +183,6 @@ function getPatientTestItem(observation) {
         context: observation?.context ?? "unknown"
     };
 }
-
 
 
 /*
@@ -210,7 +209,6 @@ function getPatientSelectItem(patient) {
     else
         return null;
 }
-
 
 
 /*
@@ -251,7 +249,6 @@ function getLoinCDiagnosticCodes(){
 }
 
 
-
 /*
 * Parameters: none
 * Returns:
@@ -264,7 +261,6 @@ function getSnomedDiabetesCodes(){
     // console.log(`snomed diabetes codes = ${codes}`);
     return codes;
 }
-
 
 
 /*
@@ -280,7 +276,6 @@ function getSnomedPreDiabetesCodes(){
 }
 
 
-
 /*
 * Parameters:
 *   patient: type object: a patient object which is the item selected from the patients select box
@@ -290,13 +285,13 @@ function handlePatientSelected(patient) {
     // reinitialize downstream global variables
     test_select_items = [];
     patient_observations = [];
+    document.getElementById('vis_container').innerHTML = ''; // clear existing chart
 
     // console.log(patient);
     const url = `Observation?patient=${patient.data.id}&code=${getLoinCDiagnosticCodes()}`;
     // console.log(url);
     requestPatientObservations(url)
 }
-
 
 
 /*
@@ -307,6 +302,7 @@ function handlePatientSelected(patient) {
 function handleTestSelected(test) {
     // console.log(test);
     // console.log(patient_observations);
+    document.getElementById('vis_container').innerHTML = ''; // clear existing chart
 
     const test_results = [];
 
@@ -316,7 +312,6 @@ function handleTestSelected(test) {
     }
     displayPatientTestResults(test_results);
 }
-
 
 
 /*
@@ -396,7 +391,6 @@ async function requestPatientObservations(url) {
 }
 
 
-
 /*
 * NOTE: I used CoPilot to help me to debug this function
 * Parameters:
@@ -444,6 +438,8 @@ async function requestPatients(url) {
             // console.log('Recursion Terminated'); // for debugging recursion
             // requestPatients_recursion_depth = 0; // reset recursion depth
 
+            // put in alphabetical order
+            patients_select_items.sort((a, b) => a.display.localeCompare(b.display));
             // create the patients select box
             createComboBox('pats_container', 'Select a patient:', patients_select_items,
                 handlePatientSelected);
