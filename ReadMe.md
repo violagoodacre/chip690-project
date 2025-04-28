@@ -14,3 +14,11 @@ If you want to view it in SmartHealthIT, here are the steps:
 1. Go to the smarthealthit launch form ([https://launch.smarthealthit.org/](https://launch.smarthealthit.org/)),
 2. Enter the path to the launch.html file ([https://violagoodacre.github.io/chip690-project/launch.html](https://violagoodacre.github.io/chip690-project/launch.html)),
 3. Click "Launch".
+
+## Known bugs:
+The autocomplete on the patients selection box is not working. I think this is because there are too many items in the list.
+
+## Improvement ideas:
+1. Move the infomation area above the chart to be to the side of the chart (left or right).
+2. Get and display the Condition information when the patient is selected, not when the test type is selected.
+3. Add to the information area Patient information.
