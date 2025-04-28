@@ -4,7 +4,7 @@ This is my CHIP-690-297-Spring2025 project. It dispalys diabetes diagnostic test
 
 ## How to use:
 1. Open in a web browser ([https://violagoodacre.github.io/chip690-project/](https://violagoodacre.github.io/chip690-project/)).
-2. Select a patient. Most patients only have one test type, and some have few test results. If you want to see more than one test type, try selecting one of these patients: **Carol Allen, Ruth Black, Anthony Coleman, Frank Taylor**. Tthere are likely to be more, but these are the names I have found so far with more than one type of SNOMED CT diabetes diagnostic test.
+2. Select a patient. Most patients only have one test type, and some have few test results. If you want to see more than one test type, try selecting one of these patients: **Carol Allen, Ruth Black, Anthony Coleman, Frank Taylor**. To view the full capability of the visualization, I recommend selecting to view **Frank Taylor's Glucose test results**. There are likely to be more, but these are the names I have found so far with more than one type of SNOMED CT diabetes diagnostic test.
 3. Select a test type. A timeseries chart of the patient's test results will show.
 4. Hover over datapoints to see the data for that datapoint.
 
