@@ -10,9 +10,9 @@ var client = FHIR.client("https://r3.smarthealthit.org");
 *                                        and data (anything needed to handle the selection
 *   handleSelection: type: function - callback
 */
-function createComboBox(containerId, label, optionsList, handleSelection) {
+function createComboBox(containerId, label, width, optionsList, handleSelection) {
     const inputId = `${containerId}_input`;
-    // console.log(optionsList);
+    // console.log('optionsList', optionsList);
 
     // create combo box using jquery autocomplete input widget
     const html = `
@@ -42,7 +42,7 @@ function createComboBox(containerId, label, optionsList, handleSelection) {
             handleSelection(selectedItem); // callback
 
         }
-    }).css("width", "200px");
+    }).css("width", width);
 
     // TODO: this is not working -- need to debug it
     $(`#${inputId}`).on('click', function () {
@@ -52,112 +52,107 @@ function createComboBox(containerId, label, optionsList, handleSelection) {
 
 
 function displayPatientTestResults(patient_test_results){
-    // console.log(patient_test_results);
+    console.log('patient_test_results', patient_test_results);
     document.getElementById('vis_container').innerHTML = ''; // clear existing chart
 
-    const series_data = patient_test_results.map(item => [item.datetime, item.value]);
+    // convert patient test result date strings to dates
+    let dates = []
+    const datetime_strings = patient_test_results.map(item => item.datetime);
+    datetime_strings.forEach(datetime_string => {
+        let date = new Date(datetime_string).getTime();
+        dates.push(date);
+    });
+    // console.log('dates', dates);
 
-    console.log(series_data);
+    const values = patient_test_results.map(item => item.value);
+    const series_data = dates.map((item, i) => [item, values[i]]);
+    series_data.sort((a, b) => a[0] - b[0]);
 
-    // const y_values = patient_test_results.map(item => item.value);
-    // let x_values = [];
-    //
-    // console.log(y_values);
-    // console.log(x_values);
-    //
-    // const datetime_strings = patient_test_results.map(item => item.datetime);
-    // datetime_strings.forEach(datetime_string => {
-    //     let date = new Date(datetime_string);
-    //     x_values.push(date.getFullYear());
-    // });
+    // console.log('series_data', series_data);
 
-    const options = {
-        // chart: {
-        //     type: 'bar'
-        // },
-        title: {text: `${patient_test_results[0].patient.display}: Test Results`},
-        subtitle: {text: patient_test_results[0].display},
-        yAxis: {
-            title: {text: `Values (${patient_test_results[0].unit})`}
-        },
-        // xAxis: {
-        //     accessibility: {rangeDescription: `Range: ${Math.min(x_values)} to ${Math.max(x_values)}`}
-        // },
-        series: { data: series_data }
+    // check if high and low values exist
+    const high = patient_test_results[0]?.high ?? null;
+    const low = patient_test_results[0]?.low ?? null;
+
+
+    // NOTE: CoPilot helped with conditional defining of plotlines
+    const plotLines = [];
+
+    // set the high line if it exists and is not zero
+    if (high && high !== 0) {
+        plotLines.push({
+            value: high,
+            color: 'red',
+            width: 2,
+            label: {
+                text: 'Max Value',
+                align: 'right',
+                style: {
+                    color: 'red'
+                }
+            }
+        });
     }
 
-    console.log(options);
+    // set the low line if it exists and is not zero
+    if (low && low !== 0) {
+        plotLines.push({
+            value: low,
+            color: 'blue',
+            width: 2,
+            label: {
+                text: 'Min Value',
+                align: 'right',
+                style: {
+                    color: 'blue'
+                }
+            }
+        });
+    }
 
-    Highcharts.chart('vis_container', options);
+    // Reference: https://jsfiddle.net/BlackLabel/y0dkzn1q/
 
-
-
-
-
-        // legend: {
-        //     layout: 'vertical',
-        //     align: 'right',
-        //     verticalAlign: 'middle'
-        // },
-
-        // plotOptions: {
-        //     series: {
-        //         label: {
-        //             connectorAllowed: false
-        //         },
-        //         pointStart: 2010
-        //     }
-        // },
-
-    //     series: [{
-    //         name: 'Installation & Developers',
-    //         data: [
-    //             43934, 48656, 65165, 81827, 112143, 142383,
-    //             171533, 165174, 155157, 161454, 154610, 168960, 171558
-    //         ]
-    //     }, {
-    //         name: 'Manufacturing',
-    //         data: [
-    //             24916, 37941, 29742, 29851, 32490, 30282,
-    //             38121, 36885, 33726, 34243, 31050, 33099, 33473
-    //         ]
-    //     }, {
-    //         name: 'Sales & Distribution',
-    //         data: [
-    //             11744, 30000, 16005, 19771, 20185, 24377,
-    //             32147, 30912, 29243, 29213, 25663, 28978, 30618
-    //         ]
-    //     }, {
-    //         name: 'Operations & Maintenance',
-    //         data: [
-    //             null, null, null, null, null, null, null,
-    //             null, 11164, 11218, 10077, 12530, 16585
-    //         ]
-    //     }, {
-    //         name: 'Other',
-    //         data: [
-    //             21908, 5548, 8105, 11248, 8989, 11816, 18274,
-    //             17300, 13053, 11906, 10073, 11471, 11648
-    //         ]
-    //     }],
-    //
-    //     responsive: {
-    //         rules: [{
-    //             condition: {
-    //                 maxWidth: 500
-    //             },
-    //             chartOptions: {
-    //                 legend: {
-    //                     layout: 'horizontal',
-    //                     align: 'center',
-    //                     verticalAlign: 'bottom'
-    //                 }
-    //             }
-    //         }]
-    //     }
-    //
-
-
+    Highcharts.chart('vis_container', {
+        chart: {
+            padding: 20
+        },
+        title: {
+            text: `${patient_test_results[0].patient.display}: Test Results`
+        },
+        subtitle: {
+            text: patient_test_results[0].display
+        },
+        yAxis: {
+            title: {
+                text: `Values (${patient_test_results[0].unit})`
+            },
+            plotLines: plotLines
+        },
+        xAxis: {
+            type: 'datetime',
+            labels: {
+                format: '{value:%Y-%m-%d}',
+                rotation: -45 // rotate 45 degrees left
+            }
+        },
+        legend: {
+            enabled: false
+        },
+        tooltip: {
+            formatter: function () {
+                return `<b>${patient_test_results[0].display}</b><br>` +
+                    `Date: ${Highcharts.dateFormat('%Y-%m-%d', this.x)}<br> ` +
+                    `Value: ${this.y} ${patient_test_results[0].unit}`;
+            }
+        },
+        series: [{
+            data: series_data,
+            marker: {
+                enabled: true,
+                symbol: 'circle'
+            }
+        }]
+    });
 }
 
 
@@ -170,7 +165,7 @@ function displayPatientTestResults(patient_test_results){
 *   if no patient name, returns null
 */
 function getPatientTestItem(observation) {
-    // console.log(observation);
+    // console.log('observation', observation);
     return {
         patient: getPatientSelectItem(observation.subject),
         display: getResourceItemDisplayName(observation),
@@ -194,18 +189,15 @@ function getPatientTestItem(observation) {
 *   if no patient name, returns null
 */
 function getPatientSelectItem(patient) {
-    console.log(patient);
     let name = '';
     for(let i=0; i<patient.name.length; i++){
         name = patient.name[i];
         if(name.use === 'official')
             break;
     }
-    // console.log(name);
-    if(name) {
+    if(name)
         return { display: `${name.family}, ${name.given[0]}`,
             data: {family: name.family, given: name.given, id: patient.id }};
-    }
     else
         return null;
 }
@@ -243,7 +235,7 @@ function getLoinCDiagnosticCodes(){
         C-peptide	                    26539-5
         Diabetes panel	                24323-8
     */
-    const codes=`${url}4548-4,${url}1558-6,${url}2345-7,${url}10451-2,${url}2075-0,${url}26539-5,${url}24323-8`;
+    const codes=`${url}4548-4,${url}1558-6,${url}2345-7,${url}10451-2,${url}2075-0,${url}26539-5`; //,${url}24323-8`;
     // console.log(`loinc diabetes diagnostic codes = ${codes}`);
     return codes;
 }
@@ -255,9 +247,45 @@ function getLoinCDiagnosticCodes(){
 *   string: list of snomed diabetes code urls
 */
 function getSnomedDiabetesCodes(){
-    const url = 'http://snomed.info/sct|';
-    const codes = `${url}73211009,${url}46635009,${url}44054006,${url}11687002,${url}190388001,`+
-        `${url}199225006,${url}8718002,${url}237605008,${url}421752006`;
+    /*
+        Some common SNOMED codes for Diabetes from ChatGPT
+        // type 2
+        46635009	Type 2 diabetes mellitus uncontrolled
+        8718002	    Secondary diabetes mellitus (diabetes due to another condition, e.g., pancreatitis)
+        15784000	Diabetes mellitus, adult onset type (older terminology for T2DM)
+        127013003	Type 2 diabetes mellitus with nephropathy
+        111552007	Type 2 diabetes mellitus with retinopathy
+        190388001	Type 2 diabetes mellitus with neuropathy
+        421752006   Type 2 diabetes mellitus with polyneuropathy (nerve damage)
+        111556003	Type 2 diabetes mellitus with gangrene
+        111558002   Type 2 diabetes mellitus with ulcer
+        440540002 	Type 2 diabetes mellitus with peripheral angiopathy
+        111552007	Non-insulin dependent diabetes mellitus, uncontrolled (basically poorly controlled T2DM)
+        190321009	Maturity onset diabetes of the young (MODY, a genetic type of diabetes)
+        127013003	Gestational diabetes mellitus (diabetes during pregnancy)
+        // type 1
+        44054006	Diabetes mellitus type 1
+        237605008	Type 1 diabetes mellitus with nephropathy (kidney damage from T1DM)
+        15777000	Diabetes mellitus, juvenile type (older terminology for T1DM)
+        // broad
+        73211009	Diabetes mellitus
+        11687002	Disorder of glucose metabolism (broad category, includes diabetes and prediabetes)
+        pre-diabetes
+        190388001	Impaired glucose tolerance (prediabetes condition)
+        199225006	Impaired fasting glucose (another prediabetes condition)
+     */
+
+        const url = 'http://snomed.info/sct|';
+        // type 2
+        // let codes = `${url}46635009,${url}8718002,${url}15784000`;
+                           // `,${url}127013003,${url}111552007,${url}190388001,${url}421752006,${url}111558002` +
+                           // `,${url}111556003,${url}440540002,${url}111552007,${url}190321009,${url}127013003`;
+        // type 1
+        let codes = `${url}44054006,${url}237605008,${url}15777000`;
+        // prediabetes
+        codes += `${url}190388001,${url}199225006`;
+        // broad
+        codes += `${url}73211009,${url}11687002`;
     // console.log(`snomed diabetes codes = ${codes}`);
     return codes;
 }
@@ -270,8 +298,8 @@ function getSnomedDiabetesCodes(){
 */
 function getSnomedPreDiabetesCodes(){
     const url = 'http://snomed.info/sct|';
-    const codes = `${url}15777000,${url}11687002,${url}15784000,${url}111552007,${url}190321009,${url}127013003`;
-    // console.log(`snomed pre-diabetes codes = ${codes}`);
+    const codes = `${url}1310004,${url}73480000,${url}88512005`;
+    // console.log('snomed pre-diabetes codes', codes);
     return codes;
 }
 
@@ -287,9 +315,9 @@ function handlePatientSelected(patient) {
     patient_observations = [];
     document.getElementById('vis_container').innerHTML = ''; // clear existing chart
 
-    // console.log(patient);
+    // console.log('patient', patient);
     const url = `Observation?patient=${patient.data.id}&code=${getLoinCDiagnosticCodes()}`;
-    // console.log(url);
+    // console.log('url', url);
     requestPatientObservations(url)
 }
 
@@ -300,8 +328,8 @@ function handlePatientSelected(patient) {
 * Returns: none
  */
 function handleTestSelected(test) {
-    // console.log(test);
-    // console.log(patient_observations);
+    console.log('test.display', test.display);
+    console.log('patient_observations', patient_observations);
     document.getElementById('vis_container').innerHTML = ''; // clear existing chart
 
     const test_results = [];
@@ -310,6 +338,7 @@ function handleTestSelected(test) {
         if (item.code === test.data)
             test_results.push(item);
     }
+    console.log('test_results', test_results);
     displayPatientTestResults(test_results);
 }
 
@@ -333,8 +362,28 @@ async function requestPatientObservations(url) {
     *   false if the object is not in the set
     */
     function isDuplicateTestType(list, obj) {
+        // console.log(obj);
         for (let item of list) {
-            if (item.code === obj.code)
+            if (item.data === obj.data)
+                return true;
+        }
+        return false;
+    }
+
+    /*
+    * Parameters:
+    *   list: type list of objects - the set of objects to add to
+    *   obj: type object - the object to be added
+    * Returns:
+    *   true if the object is in the set
+    *   false if the object is not in the set
+    */
+    function isDuplicateTestResult(list, obj) {
+        // console.log('isDuplicateTestResult list', list);
+        for (let item of list) {
+            if ((item.code === obj.code) && (item.datetime === obj.datetime) &&
+                (item.patient.data.family === obj.patient.data.family) &&
+                (item.patient.data.given === obj.patient.data.given[0]))
                 return true;
         }
         return false;
@@ -344,13 +393,13 @@ async function requestPatientObservations(url) {
     // requestPatientObservations_recursion_depth++;  // for debugging recursion
     // console.log('Recursion Depth:', requestPatientObservations_recursion_depth); // for debugging recursion
     let request_url = url;
-    // console.log(request_url);
+    // console.log('request_url', request_url);
 
     try {
         const response = await client.request(url, {
             resolveReferences: ["subject"]
         });
-        // console.log(response); // log the entire response to understand its structure
+        console.log('response', response); // log the entire response to understand its structure
 
         // iterate through response entries
         response.entry.forEach(entry => {
@@ -364,8 +413,13 @@ async function requestPatientObservations(url) {
                 if (display && !isDuplicateTestType(test_select_items, new_item))
                     test_select_items.push(new_item);
 
+                // console.log('isDuplicateTestResult = ', isDuplicateTestResult(patient_observations, getPatientTestItem(entry.resource)));
+
                 // get what's needed to handle a test selection
-                patient_observations.push(getPatientTestItem(entry.resource));
+                // let patient_test_result = getPatientTestItem(entry.resource);
+                if (!isDuplicateTestResult(patient_observations, entry.resource)) {
+                    patient_observations.push(getPatientTestItem(entry.resource));
+                }
             }
         });
 
@@ -379,10 +433,20 @@ async function requestPatientObservations(url) {
         } else {
             // console.log('Recursion Terminated'); // for debugging recursion
             // requestPatientObservations_recursion_depth = 0; // reset recursion depth
-            // console.log(test_select_items);
-            // console.log(patient_observations);
+
+            // console.log('patient_observations', patient_observations);
+            // handle items for the select box
+            test_select_items.sort((a, b) => a.display.localeCompare(b.display));
+            console.log('test_select_items count = ', test_select_items.length);
+            /*
+                carol allen
+                ruth black
+                anthony coleman
+                frank taylor
+             */
+
             // create the patients select box
-            createComboBox('obs_container', 'Select a diagnostic test:', test_select_items,
+            createComboBox('obs_container', 'Select a diagnostic test:', '400px', test_select_items,
                 handleTestSelected);
         }
     } catch (error) {
@@ -405,8 +469,10 @@ async function requestPatients(url) {
     let request_url = url;
 
     try {
-        const response = await client.request(url, {});
-        // console.log(response); // log the entire response to understand its structure
+        const response = await client.request(url, {
+            resolveReferences: ["Condition.subject"]
+        });
+        // console.log('requestPatients response (single iteration)', response); // log the entire response to understand its structure
 
         // iterate through response entries
         response.entry.forEach(entry => {
@@ -418,19 +484,15 @@ async function requestPatients(url) {
                 if(!deceased) {
                     // get what's needed to populate the select box
                     let selectItem = getPatientSelectItem(entry.resource);
-                    // console.log(selectItem);
                     if (selectItem) // if not null
                         patients_select_items.push(selectItem);
                 }
             }
         });
 
-        // console.log(patients);
-
         // get the link to get the next page of patient data
         const nextLink = (response.link || []).find(l => l.relation === "next");
         request_url = nextLink ? nextLink.url : '';
-        // console.log(request_url);
 
         if (request_url) {
             await requestPatients(request_url); // recursion to get next page
@@ -440,8 +502,9 @@ async function requestPatients(url) {
 
             // put in alphabetical order
             patients_select_items.sort((a, b) => a.display.localeCompare(b.display));
+            // console.log('patients_select_items', patients_select_items);
             // create the patients select box
-            createComboBox('pats_container', 'Select a patient:', patients_select_items,
+            createComboBox('pats_container', 'Select a patient:', '250px',  patients_select_items,
                 handlePatientSelected);
         }
     } catch (error) {
@@ -452,4 +515,4 @@ async function requestPatients(url) {
 /* NOTE: requesting each condition separately because there is a bug wherein calling both sets of codes
          together causes the recursion to not return before the request times out. */
 requestPatients(`Patient?_has:Condition:patient:code=${getSnomedDiabetesCodes()}&_count=100`);
-requestPatients(`Patient?_has:Condition:patient:code=${getSnomedPreDiabetesCodes()}&_count=100`);
+// requestPatients(`Patient?_has:Condition:patient:code=${getSnomedPreDiabetesCodes()}&_count=100`);
