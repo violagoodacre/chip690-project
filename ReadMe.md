@@ -1,6 +1,15 @@
-# CHIP690 Project
+# CHIP690-297-Spring2025 Project
 
-Developing a variety of Launchers and App pages using HTML and JavaScript to Demo various contexts and functionality when using FHIR to interact with Epic and similar EHR systems.
+This is my CHIP-690-297-Spring2025 project. It dispalys diabetes diagnostic test results for a specific patient. Patients with diabetes or prediabetes were selected using a sample (non-exhaustive) list of SNOMED CT codes. Test results were obtained using LOINC codes. The display uses HighCharts.
+
+## How to use:
+Open in a web browse (https://violagoodacre.github.io/chip690-project/). (NOTE: I have included a launch.html for launching in SmartHealthIT, but there is no need to do this because the webpage is stand-alone. If you want to view it in SmartHealthIT, you can do so by going toenter the URL of your '...launch.html' page in the smarthealthit launch form and click "Launch".
+
+For example, my URL is https://jetweedy.github.io/smart_on_fhir/launch.html
+   
+speciallows the user to select from a list of patients with sample diabetes and pre-diabetes SNOMED CT codes.
+
+It uses Jon Tweedy's Smart on FHIR demo repo (https://github.com/jetweedy/smart_on_fhir) for code to launch  
 
 ## How to use:
 
