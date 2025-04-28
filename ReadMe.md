@@ -3,9 +3,9 @@
 This is my CHIP-690-297-Spring2025 project. It dispalys diabetes diagnostic test results for a specific patient. Patients with diabetes or prediabetes were selected using a sample (non-exhaustive) list of SNOMED CT codes. Test results were obtained using LOINC codes. The display uses HighCharts.
 
 ## How to use:
-Open in a web browse (https://violagoodacre.github.io/chip690-project/). (NOTE: I have included a launch.html for launching in SmartHealthIT, but there is no need to do this because the webpage is stand-alone. If you want to view it in SmartHealthIT, you can do so by going toenter the URL of your '...launch.html' page in the smarthealthit launch form and click "Launch".
+1. Open in a web browser (https://violagoodacre.github.io/chip690-project/). (NOTE: I have included a launch.html for launching in SmartHealthIT, but there is no need to do this because the webpage is stand-alone. If you want to view it in SmartHealthIT, you can do so by going toenter the URL of your '...launch.html' page in the smarthealthit launch form and click "Launch".
 
-For example, my URL is https://jetweedy.github.io/smart_on_fhir/launch.html
+For example, my URL is [https://violagoodacre.github.io/chip690-project/launch.html](https://violagoodacre.github.io/chip690-project/launch.html)
    
 speciallows the user to select from a list of patients with sample diabetes and pre-diabetes SNOMED CT codes.
 
