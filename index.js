@@ -6,6 +6,7 @@ var client = FHIR.client("https://r3.smarthealthit.org");
 * Parameters:
 *   containerId: type: string - prepended id of container where the control is to be rendered.
 *   label: type: string - label for the control
+*   wodth: type: string - the width of the input box in pixels
 *   optionsList: type: list of objects - each object should have the keys display (string),
 *                                        and data (anything needed to handle the selection
 *   handleSelection: type: function - callback
@@ -25,8 +26,8 @@ function createComboBox(containerId, label, width, optionsList, handleSelection)
     // NOTE: CoPilot helped me debug the autocomplete to make it more efficient
 
     const formattedOptions = optionsList.map(item => ({
-        label: item.display,
-        value: item.display,
+        label: item.observation,
+        value: item.observation,
         data: item.data
     }));
 
@@ -38,7 +39,7 @@ function createComboBox(containerId, label, width, optionsList, handleSelection)
         minLength: 0,
         delay: 300,
         select: function(event, ui) {  // handle when an item is selected
-            const selectedItem = {display: ui.item.value, data: ui.item.data};
+            const selectedItem = {observation: ui.item.value, data: ui.item.data};
             handleSelection(selectedItem); // callback
 
         }
@@ -51,8 +52,12 @@ function createComboBox(containerId, label, width, optionsList, handleSelection)
 }
 
 
+/*
+* Parameters:
+*   patient_test_results: type: object - patient test results as defined by the handleTestSelected function
+*/
 function displayPatientTestResults(patient_test_results){
-    console.log('patient_test_results', patient_test_results);
+    // console.log('patient_test_results', patient_test_results);
     document.getElementById('vis_container').innerHTML = ''; // clear existing chart
 
     // convert patient test result date strings to dates
@@ -117,10 +122,10 @@ function displayPatientTestResults(patient_test_results){
             padding: 20
         },
         title: {
-            text: `${patient_test_results[0].patient.display}: Test Results`
+            text: `${patient_test_results[0].patient.observation}: Test Results`
         },
         subtitle: {
-            text: patient_test_results[0].display
+            text: patient_test_results[0].observation
         },
         yAxis: {
             title: {
@@ -140,7 +145,7 @@ function displayPatientTestResults(patient_test_results){
         },
         tooltip: {
             formatter: function () {
-                return `<b>${patient_test_results[0].display}</b><br>` +
+                return `<b>${patient_test_results[0].observation}</b><br>` +
                     `Date: ${Highcharts.dateFormat('%Y-%m-%d', this.x)}<br> ` +
                     `Value: ${this.y} ${patient_test_results[0].unit}`;
             }
@@ -159,15 +164,16 @@ function displayPatientTestResults(patient_test_results){
 /*
 * Parameters:
 *   observation: type object - a FHIR observation object
+*   patient: type object: patient info from the patient drop-down selection
 * Returns:
 *   object: display: string - display name
 *           data: object - observation data needed for handling selection
 *   if no patient name, returns null
 */
-function getPatientTestItem(observation) {
+function getPatientTestItem(observation, patient) {
     // console.log('observation', observation);
-    return {
-        patient: getPatientSelectItem(observation.subject),
+    let data =  {
+        patient: patient,
         display: getResourceItemDisplayName(observation),
         code: observation?.code?.coding[0]?.code ?? "",
         value: observation?.valueQuantity?.value ?? null,
@@ -177,6 +183,12 @@ function getPatientTestItem(observation) {
         datetime: observation?.effectiveDateTime ?? "unknown",
         context: observation?.context ?? "unknown"
     };
+
+    if(patient_condition && patient_condtion.patient === data.patient.data.id) {
+        data['condition'] = patient_condtion;
+    }
+    console.log('patient test item', data);
+    return data;
 }
 
 
@@ -196,7 +208,7 @@ function getPatientSelectItem(patient) {
             break;
     }
     if(name)
-        return { display: `${name.family}, ${name.given[0]}`,
+        return { observation: `${name.family}, ${name.given[0]}`,
             data: {family: name.family, given: name.given, id: patient.id }};
     else
         return null;
@@ -212,7 +224,7 @@ function getPatientSelectItem(patient) {
 function getResourceItemDisplayName(resource) {
     let display = resource?.code.text ?? "";
     if (display === "") {
-        display = resource?.code?.coding[0]?.display ?? "";
+        display = resource?.code?.coding[0]?.observation ?? "";
     }
     return display;
 }
@@ -310,15 +322,23 @@ function getSnomedPreDiabetesCodes(){
 * Returns: none
  */
 function handlePatientSelected(patient) {
+    console.log('patient', patient);
+
     // reinitialize downstream global variables
     test_select_items = [];
-    patient_observations = [];
+    // patient_observations = [];
+    patient_condition = [];
     document.getElementById('vis_container').innerHTML = ''; // clear existing chart
 
-    // console.log('patient', patient);
-    const url = `Observation?patient=${patient.data.id}&code=${getLoinCDiagnosticCodes()}`;
+    // Condition?patient=${patientId}&code=${encodeURIComponent(snomedDiabetesCodes)}&_sort=-date&_count=1&clinicalStatus=active
+
+    let url = `Condition?patient=${patient.data.id}&code=${encodeURIComponent(getSnomedDiabetesCodes())}&_count=100`;
     // console.log('url', url);
-    requestPatientObservations(url)
+    requestPatientConditions(url, patient);
+
+    url = `Observation?patient=${patient.data.id}&code=${encodeURIComponent(getLoinCDiagnosticCodes())}&_count=100`;
+    // console.log('url', url);
+    requestPatientObservations(url, patient)
 }
 
 
@@ -328,8 +348,8 @@ function handlePatientSelected(patient) {
 * Returns: none
  */
 function handleTestSelected(test) {
-    console.log('test.display', test.display);
-    console.log('patient_observations', patient_observations);
+    // console.log('test.display', test.display);
+    // console.log('patient_observations', patient_observations);
     document.getElementById('vis_container').innerHTML = ''; // clear existing chart
 
     const test_results = [];
@@ -338,20 +358,52 @@ function handleTestSelected(test) {
         if (item.code === test.data)
             test_results.push(item);
     }
-    console.log('test_results', test_results);
+    // console.log('test_results', test_results);
     displayPatientTestResults(test_results);
 }
 
 
 /*
 * Parameters:
+*   request_url: type string: request url to send to FHIR client
+*   patient: type object: patient info from the patient drop-down selection
+* Returns: none
+*/
+let patient_condition = [];
+async function requestPatientConditions(request_url, patient) {
+    // console.log('patient', patient);
+    try {
+        const response = await client.request(request_url, {});
+        console.log('response', response); // log the entire response to understand its structure
+
+        // iterate through response entries
+        response.entry.forEach(entry => {
+            // we are only interested in laboratory test results
+            if ((entry.resource?.resourceType ?? "") === "Condition") {
+                let pat_cond =
+                    {condition: getResourceItemDisplayName(entry.resource), patient: patient.data.id};
+                // TODO: check that pat_cond is active and most recent dated
+                //      first, isolate those with clinicalStatus of active
+                //      then, select the one with the highest date
+                patient_condition = pat_cond;
+            }
+        });
+        console.log(patient_condition);
+    } catch (error) {
+        console.error('Error getting patient conditions:', error);
+    }
+}
+
+
+/*
+* Parameters:
 *   url: type string: request url to send to FHIR client
+*   patient: type object: patient info from the patient drop-down selection
 * Returns: none
 */
 let test_select_items = [];
-let patient_observations = [];
 // let requestPatientObservations_recursion_depth = 0;  // for debugging recursion
-async function requestPatientObservations(url) {
+async function requestPatientObservations(url, patient) {
 
     /*
     * Parameters:
@@ -396,9 +448,7 @@ async function requestPatientObservations(url) {
     // console.log('request_url', request_url);
 
     try {
-        const response = await client.request(url, {
-            resolveReferences: ["subject"]
-        });
+        const response = await client.request(url, {});
         console.log('response', response); // log the entire response to understand its structure
 
         // iterate through response entries
@@ -409,16 +459,17 @@ async function requestPatientObservations(url) {
 
                 let display = getResourceItemDisplayName(entry.resource);
 
-                let new_item = {display: display, data: entry.resource?.code?.coding[0]?.code ?? ""};
+                let new_item = {observation: display, data: entry.resource?.code?.coding[0]?.code ?? ""};
                 if (display && !isDuplicateTestType(test_select_items, new_item))
                     test_select_items.push(new_item);
 
-                // console.log('isDuplicateTestResult = ', isDuplicateTestResult(patient_observations, getPatientTestItem(entry.resource)));
-
                 // get what's needed to handle a test selection
-                // let patient_test_result = getPatientTestItem(entry.resource);
                 if (!isDuplicateTestResult(patient_observations, entry.resource)) {
-                    patient_observations.push(getPatientTestItem(entry.resource));
+                    if (display && !isDuplicateTestType(test_select_items, new_item)) {
+                        const new_item =
+                            {observation: display, patient: getPatientTestItem(entry.resource, patient)};
+                        test_select_items.push(new_item);
+                    }
                 }
             }
         });
@@ -429,15 +480,15 @@ async function requestPatientObservations(url) {
         // console.log(request_url);
 
         if (request_url) {
-            await requestPatientObservations(request_url); // recursion to get next page
+            await requestPatientObservations(request_url, patient); // recursion to get next page
         } else {
             // console.log('Recursion Terminated'); // for debugging recursion
             // requestPatientObservations_recursion_depth = 0; // reset recursion depth
 
             // console.log('patient_observations', patient_observations);
             // handle items for the select box
-            test_select_items.sort((a, b) => a.display.localeCompare(b.display));
-            console.log('test_select_items count = ', test_select_items.length);
+            test_select_items.sort((a, b) => a.observation.localeCompare(b.observation));
+            console.log('test_select_items = ', test_select_items);
             /*
                 carol allen
                 ruth black
@@ -450,7 +501,7 @@ async function requestPatientObservations(url) {
                 handleTestSelected);
         }
     } catch (error) {
-        console.error('Error getting observations:', error);
+        console.error('Error getting patient observations:', error);
     }
 }
 
@@ -469,9 +520,7 @@ async function requestPatients(url) {
     let request_url = url;
 
     try {
-        const response = await client.request(url, {
-            resolveReferences: ["Condition.subject"]
-        });
+        const response = await client.request(url, {});
         // console.log('requestPatients response (single iteration)', response); // log the entire response to understand its structure
 
         // iterate through response entries
@@ -501,7 +550,7 @@ async function requestPatients(url) {
             // requestPatients_recursion_depth = 0; // reset recursion depth
 
             // put in alphabetical order
-            patients_select_items.sort((a, b) => a.display.localeCompare(b.display));
+            patients_select_items.sort((a, b) => a.observation.localeCompare(b.observation));
             // console.log('patients_select_items', patients_select_items);
             // create the patients select box
             createComboBox('pats_container', 'Select a patient:', '250px',  patients_select_items,
@@ -514,5 +563,5 @@ async function requestPatients(url) {
 
 /* NOTE: requesting each condition separately because there is a bug wherein calling both sets of codes
          together causes the recursion to not return before the request times out. */
-requestPatients(`Patient?_has:Condition:patient:code=${getSnomedDiabetesCodes()}&_count=100`);
-// requestPatients(`Patient?_has:Condition:patient:code=${getSnomedPreDiabetesCodes()}&_count=100`);
+requestPatients(`Patient?_has:Condition:patient:code=${encodeURIComponent(getSnomedDiabetesCodes())}&_count=100`);
+// requestPatients(`Patient?_has:Condition:patient:code=${encodeURIComponent(getSnomedPreDiabetesCodes())}&_count=100`);
