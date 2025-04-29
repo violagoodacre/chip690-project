@@ -73,15 +73,15 @@ function getSnomedDiabetesCodes(){
 
     const url = 'http://snomed.info/sct|';
     // type 2
-    // let codes = `${url}46635009,${url}8718002,${url}15784000`;
-    // `,${url}127013003,${url}111552007,${url}190388001,${url}421752006,${url}111558002` +
-    // `,${url}111556003,${url}440540002,${url}111552007,${url}190321009,${url}127013003`;
+    let codes = `${url}46635009,${url}8718002,${url}15784000` +
+    `,${url}127013003,${url}111552007,${url}190388001,${url}421752006,${url}111558002` +
+    `,${url}111556003,${url}440540002,${url}111552007,${url}190321009,${url}127013003`;
     // type 1
-    let codes = `${url}44054006,${url}237605008,${url}15777000`;
+    codes += `,${url}44054006,${url}237605008,${url}15777000`;
     // prediabetes
-    codes += `${url}190388001,${url}199225006`;
+    codes += `,${url}190388001,${url}199225006`;
     // broad
-    codes += `${url}73211009,${url}11687002`;
+    codes += `,${url}73211009,${url}11687002`;
     // console.log(`snomed diabetes codes = ${codes}`);
     return codes;
 }
@@ -145,7 +145,6 @@ function createComboBox(containerId, label, width, optionsList, handleSelection)
         }
     }).css("width", width);
 
-    // TODO: this is not working -- need to debug it
     $(`#${inputId}`).on('click', function () {
         $(`#${inputId}`).focus().autocomplete('search', '');
     });
