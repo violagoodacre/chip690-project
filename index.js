@@ -1,4 +1,4 @@
-var client = FHIR.client("https://r3.smarthealthit.org");
+let client = FHIR.client("https://r3.smarthealthit.org");
 // console.log(client);
 
 
@@ -32,9 +32,7 @@ function getLoinCDiagnosticCodes(){
         C-peptide	                    26539-5
         Diabetes panel	                24323-8
     */
-    const codes=`${url}4548-4,${url}1558-6,${url}2345-7,${url}10451-2,${url}2075-0,${url}26539-5`; //,${url}24323-8`;
-    // console.log(`loinc diabetes diagnostic codes = ${codes}`);
-    return codes;
+    return `${url}4548-4,${url}1558-6,${url}2345-7,${url}10451-2,${url}2075-0,${url}26539-5`; //,${url}24323-8`;;
 }
 
 
@@ -83,18 +81,6 @@ function getSnomedDiabetesCodes(){
     // broad
     codes += `,${url}73211009,${url}11687002`;
     // console.log(`snomed diabetes codes = ${codes}`);
-    return codes;
-}
-
-
-/*
-* Returns:
-*   string: list of snomed pre-diabetes code urls
-*/
-function getSnomedPreDiabetesCodes(){
-    const url = 'http://snomed.info/sct|';
-    const codes = `${url}1310004,${url}73480000,${url}88512005`;
-    // console.log('snomed pre-diabetes codes', codes);
     return codes;
 }
 
@@ -413,9 +399,7 @@ async function requestPatientCondition(request_url, patient) {
             // we are only interested in the most recent active condition
             if (((entry.resource?.resourceType ?? "") === "Condition") &&
                 ((entry.resource?.clinicalStatus ?? "") === "active")) {
-                let pat_cond =
-                {display: getResourceItemDisplayName(entry.resource), patient: patient.data.id, data: entry.resource};
-                patient_condition = pat_cond;
+                patient_condition = {display: getResourceItemDisplayName(entry.resource), patient: patient.data.id, data: entry.resource};
             }
         });
         // console.log('patient_condition', patient_condition);
@@ -588,7 +572,4 @@ async function requestPatients(url) {
     }
 }
 
-/* NOTE: requesting each condition separately because there is a bug wherein calling both sets of codes
-         together causes the recursion to not return before the request times out. */
 requestPatients(`Patient?_has:Condition:patient:code=${encodeURIComponent(getSnomedDiabetesCodes())}&_count=100`);
-// requestPatients(`Patient?_has:Condition:patient:code=${encodeURIComponent(getSnomedPreDiabetesCodes())}&_count=100`);
