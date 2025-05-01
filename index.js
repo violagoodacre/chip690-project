@@ -392,8 +392,13 @@ async function requestPatientCondition(request_url, patient) {
         const response = await client.request(request_url, {});
         // console.log('requestPatientCondition response', response); // log the entire response to understand its structure
 
-        // sort responses by assertedDate
-        response.entry.sort((a, b) => a.response.assertedDate - b.response.assertedDate);
+        // sort responses by date (assuming at least one of them exists, and preferromg assertedDate if both)
+        response.entry.sort((a, b) => {
+            if(a.response?.assertedDate ?? null)
+                return a.response.assertedDate - b.response.assertedDate
+            else
+                return a.response.onsetDateTime - b.response.onsetDateTime;
+        });
 
         // iterate through response entries
         response.entry.forEach(entry => {
