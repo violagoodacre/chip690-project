@@ -1,4 +1,4 @@
-this.client = null;
+let client = FHIR.client("https://r3.smarthealthit.org");
 // console.log(client);
 
 
