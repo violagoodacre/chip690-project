@@ -43,6 +43,7 @@ function getLoinCDiagnosticCodes(){
 function getSnomedDiabetesCodes(){
     /*
         Some common SNOMED codes for Diabetes from ChatGPT
+        Diabetes
         // type 2
         46635009	Type 2 diabetes mellitus uncontrolled
         8718002	    Secondary diabetes mellitus (diabetes due to another condition, e.g., pancreatitis)
@@ -572,4 +573,15 @@ async function requestPatients(url) {
     }
 }
 
-requestPatients(`Patient?_has:Condition:patient:code=${encodeURIComponent(getSnomedDiabetesCodes())}&_count=100`);
+// try to get the patient (assumption is that if were are using smarthealthit launch, we have selected a patient there
+client.patient.read().then(
+    function(patient) {
+        handlePatientSelected(patient);
+    },
+    function(error) {
+        console.log(error.stack); // log the error
+        // use the stand-alone webpage patients drop-down
+        requestPatients(`Patient?_has:Condition:patient:code=${encodeURIComponent(getSnomedDiabetesCodes())}&_count=100`);
+    }
+);
+
