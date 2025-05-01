@@ -573,6 +573,8 @@ async function requestPatients(url) {
     }
 }
 
+// requestPatients(`Patient?_has:Condition:patient:code=${encodeURIComponent(getSnomedDiabetesCodes())}&_count=100`);
+
 // try to get the patient (assumption is that if were are using smarthealthit launch, we have selected a patient there
 client.patient.read().then(
     function(patient) {
@@ -584,4 +586,3 @@ client.patient.read().then(
         requestPatients(`Patient?_has:Condition:patient:code=${encodeURIComponent(getSnomedDiabetesCodes())}&_count=100`);
     }
 );
-
