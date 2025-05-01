@@ -627,4 +627,25 @@ async function requestPatients(url) {
 }
 
 // requestPatients(`Patient?_has:Condition:patient:code=${encodeURIComponent(getSnomedDiabetesCodes())}&_count=100`);
-render();
+// render();
+
+// try to get the patient (assumption is that if were are using smarthealthit launch, we have selected a patient there
+FHIR.oauth2.ready().then(function(fhir_client) {
+    client.patient.read().then(
+        function(patient) {
+            client = fhir_client
+            handlePatientSelected(patient);
+        },
+        function(error) {
+            console.error(error.stack);
+        }
+    );
+}).catch(//console.error
+    function(error){
+        // log the error
+        console.log(`Patient does not exist. We are probably not using the SmartHealthIT launcher. ` +
+            `Attempt to get patient failed with error: ${error.stack}`);
+        // use the stand-alone webpage patients drop-down
+        render();
+    }
+);
