@@ -1,6 +1,10 @@
 let client = FHIR.client("https://r3.smarthealthit.org");
 // console.log(client);
 
+// URLs for codes
+const loinc_url = 'http://loinc.org|';
+const snomed_url = 'http://snomed.info/sct|';
+
 
 //////////////////////////// UTILITY FUNCTIONS ////////////////////////////
 
@@ -21,7 +25,6 @@ function isNonEmptyObject(obj) {
 *   string: list of LoinC diabetes diagnostic test code urls
 */
 function getLoinCDiagnosticCodes(){
-    const url = 'http://loinc.org|';
     /*
         Test	                        LOINC Code
         Hemoglobin A1c	                4548-4
@@ -32,7 +35,7 @@ function getLoinCDiagnosticCodes(){
         C-peptide	                    26539-5
         Diabetes panel	                24323-8
     */
-    return `${url}4548-4,${url}1558-6,${url}2345-7,${url}10451-2,${url}2075-0,${url}26539-5`; //,${url}24323-8`;;
+    return `${loinc_url}4548-4,${loinc_url}1558-6,${loinc_url}2345-7,${loinc_url}10451-2,${loinc_url}2075-0,${loinc_url}26539-5`; //,${loinc_url}24323-8`;;
 }
 
 
@@ -69,17 +72,16 @@ function getSnomedDiabetesCodes(){
         199225006	Impaired fasting glucose (another prediabetes condition)
      */
 
-    const url = 'http://snomed.info/sct|';
     // type 2
-    let codes = `${url}46635009,${url}8718002,${url}15784000` +
-    `,${url}127013003,${url}111552007,${url}190388001,${url}421752006,${url}111558002` +
-    `,${url}111556003,${url}440540002,${url}111552007,${url}190321009,${url}127013003`;
+    let codes = `${snomed_url}46635009,${snomed_url}8718002,${snomed_url}15784000` +
+    `,${snomed_url}127013003,${snomed_url}111552007,${snomed_url}190388001,${snomed_url}421752006,${snomed_url}111558002` +
+    `,${snomed_url}111556003,${snomed_url}440540002,${snomed_url}111552007,${snomed_url}190321009,${snomed_url}127013003`;
     // type 1
-    codes += `,${url}44054006,${url}237605008,${url}15777000`;
+    codes += `,${snomed_url}44054006,${snomed_url}237605008,${snomed_url}15777000`;
     // prediabetes
-    codes += `,${url}190388001,${url}199225006`;
+    codes += `,${snomed_url}190388001,${snomed_url}199225006`;
     // broad
-    codes += `,${url}73211009,${url}11687002`;
+    codes += `,${snomed_url}73211009,${snomed_url}11687002`;
     // console.log(`snomed diabetes codes = ${codes}`);
     return codes;
 }
@@ -409,6 +411,54 @@ async function requestPatientCondition(request_url, patient) {
 }
 
 
+// Create a valueset for diabetes and prediabetes that fetches all the sub-values
+async function render() {
+    // console.log('patient', patient);
+
+    // NOTE: CoPilot was used to define and create the valueset definition
+    client.create({
+        resourceType: "ValueSet",
+        status: "active",
+        compose: {
+            include: [
+                {
+                    system: "http://snomed.info/sct",
+                    filter: [
+                        {
+                            property: "concept",
+                            op: "descendent-of",
+                            value: "73211009"
+                        }
+                    ]
+                },
+                {
+                    system: "http://snomed.info/sct",
+                    filter: [
+                        {
+                            property: "concept",
+                            op: "descendent-of",
+                            value: "15777000"
+                        }
+                    ]
+                }
+            ]
+        }
+    }, {
+        headers: {
+            "Content-Type": "application/fhir+json"
+        }
+    }).then(response => {
+        console.log("ValueSet created:", response);
+        requestPatients(`Patient?_has:Condition:patient:code=` +
+            `${encodeURIComponent(snomed_url)}73211009,${encodeURIComponent(snomed_url)}15777000))}&_count=100`);
+    }).catch(error => {
+        console.log('Error setting valueset. Getting manually included sample codes instead.', error);
+        requestPatients(`Patient?_has:Condition:patient:code=${encodeURIComponent(getSnomedDiabetesCodes())}&_count=100`);
+    });
+
+}
+
+
 /*
 * Parameters:
 *   url: type string: request url to send to FHIR client
@@ -532,8 +582,12 @@ async function requestPatients(url) {
 
     try {
         const response = await client.request(url, {});
-        // console.log('requestPatients response (single iteration)', response); // log the entire response to understand its structure
+        console.log('requestPatients response (single iteration)', response); // log the entire response to understand its structure
 
+        if(response?.entry?.resource?.length ?? 0 < 1){
+            console.log('There are no entries in this response (specific iteration).');
+            return;
+        }
         // iterate through response entries
         response.entry.forEach(entry => {
             // only look at patients (which should be all of them as the request was a Patients request
@@ -572,4 +626,5 @@ async function requestPatients(url) {
     }
 }
 
-requestPatients(`Patient?_has:Condition:patient:code=${encodeURIComponent(getSnomedDiabetesCodes())}&_count=100`);
+// requestPatients(`Patient?_has:Condition:patient:code=${encodeURIComponent(getSnomedDiabetesCodes())}&_count=100`);
+render();
