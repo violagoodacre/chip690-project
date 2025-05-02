@@ -1,4 +1,4 @@
-let client = FHIR.client("https://r3.smarthealthit.org");
+let client = FHIR.client('https://r3.smarthealthit.org');
 // console.log(client);
 
 
@@ -6,13 +6,32 @@ let client = FHIR.client("https://r3.smarthealthit.org");
 
 
 /*
-* Pareameters:
+* Parameters:
 *   obj: type any
 * Returns:
 *   true if obj is a non-empty object or  false if obj is not an object, is null, or is empty
 */
 function isNonEmptyObject(obj) {
     return (typeof obj === 'object' && obj !== null && Object.keys(obj).length > 0);
+}
+
+
+/*
+* Parameters:
+*   resource: type object - a response entry resource
+*   func: type string - the name of the function
+*   recursion: type integer - how deep we are into a recursive function;
+*                           NOTE: 1 = top level of a recursion, or function is not recursive
+* Returns:
+*   true if response fewer than 1 entries; otherwise false
+*/
+function entryCountIsZero(response, func, recursion = 1) {
+    if((response?.entry?.length ?? 0) < 1){
+        console.log(`There are no entries in the ${func} resource ` +
+            `(recursion #${recursion}).`);
+        return true;
+    }
+    else return false;
 }
 
 
@@ -104,9 +123,9 @@ function createComboBox(containerId, label, width, optionsList, handleSelection)
 
     // create combo box using jquery autocomplete input widget
     const html = `
-      <label for="${inputId}" style="display: block; margin-bottom: 4px;">${label}</label>
-      <div style="display: inline-flex; align-items: center;">
-        <input id="${inputId}" />
+      <label for='${inputId}' style='display: block; margin-bottom: 4px;'>${label}</label>
+      <div style='display: inline-flex; align-items: center;'>
+        <input id='${inputId}' />
       </div>`;
     $(`#${containerId}`).html(html);
 
@@ -130,7 +149,7 @@ function createComboBox(containerId, label, width, optionsList, handleSelection)
             handleSelection(selectedItem); // callback
 
         }
-    }).css("width", width);
+    }).css('width', width);
 
     $(`#${inputId}`).on('click', function () {
         $(`#${inputId}`).focus().autocomplete('search', '');
@@ -160,6 +179,7 @@ function displayPatientTestResults(patient_test_results){
     // convert patient test result date strings to dates
     let dates = []
     const datetime_strings = patient_test_results.map(item => item.test.datetime);
+
     datetime_strings.forEach(datetime_string => {
         let date = new Date(datetime_string).getTime();
         dates.push(date);
@@ -226,7 +246,7 @@ function displayPatientTestResults(patient_test_results){
         },
         yAxis: {
             title: {
-                text: `Values (${patient_test_results[0].unit})`
+                text: `Values (${patient_test_results[0].test.unit})`
             },
             plotLines: plotLines
         },
@@ -244,7 +264,7 @@ function displayPatientTestResults(patient_test_results){
             formatter: function () {
                 return `<b>${patient_test_results[0].display}</b><br>` +
                     `Date: ${Highcharts.dateFormat('%Y-%m-%d', this.x)}<br> ` +
-                    `Value: ${this.y} ${patient_test_results[0].unit}`;
+                    `Value: ${this.y} ${patient_test_results[0].test.unit}`;
             }
         },
         series: [{
@@ -268,19 +288,19 @@ function displayPatientTestResults(patient_test_results){
 *   if no patient name, returns null
 */
 function getPatientTestItem(observation, patient) {
-    // console.log('observation', observation);
+    console.log('observation', observation);
     // console.log('getPatientTestItem patient', patient);
 
     let data =  {
         patient: patient,
         display: getResourceItemDisplayName(observation),
-        code: observation?.code?.coding[0]?.code ?? "",
+        code: observation?.code?.coding[0]?.code ?? '',
         value: observation?.valueQuantity?.value ?? null,
-        unit: observation?.valueQuantity?.unit ?? "unknown",
+        unit: observation?.valueQuantity?.unit ?? 'unknown',
         high: observation?.referenceRange?.[0]?.high?.value ?? null,
         low: observation?.referenceRange?.[0]?.low?.value ?? null,
-        datetime: observation?.effectiveDateTime ?? "unknown",
-        context: observation?.context ?? "unknown"
+        datetime: observation?.effectiveDateTime ?? 'unknown',
+        context: observation?.context ?? 'unknown'
     };
 
 
@@ -323,9 +343,9 @@ function getPatientSelectItem(patient) {
 *   string: the resource's display text
 */
 function getResourceItemDisplayName(resource) {
-    let display = resource?.code.text ?? "";
-    if (display === "") {
-        display = resource?.code?.coding[0]?.display ?? "";
+    let display = resource?.code.text ?? '';
+    if (display === '') {
+        display = resource?.code?.coding[0]?.display ?? '';
     }
     return display;
 }
@@ -345,7 +365,7 @@ function handlePatientSelected(patient) {
     patient_condition = {};
     document.getElementById('obs_container').innerHTML = ''; // clear test type selection
     document.getElementById('vis_container').innerHTML = ''; // clear chart
-     document.getElementById('info_container').innerHTML = ''; // clear info
+    document.getElementById('info_container').innerHTML = ''; // clear info
 
 
     let url = `Condition?patient=${patient.data.id}&code=${encodeURIComponent(getSnomedDiabetesCodes())}&_count=100`;
@@ -390,21 +410,28 @@ async function requestPatientCondition(request_url, patient) {
     // console.log('patient', patient);
     try {
         const response = await client.request(request_url, {});
-        // console.log('requestPatientCondition response', response); // log the entire response to understand its structure
+        console.log('requestPatientCondition response', response); // log the entire response to understand its structure
+
+        // handle if there are no resource entries
+        if(entryCountIsZero(response, 'requestPatientCondition')){
+            // TODO: put in some better user feedback
+            alert('The server did not return any conditions for this patient.');
+            return;
+        }
 
         // sort responses by date (assuming at least one of them exists, and preferromg assertedDate if both)
         response.entry.sort((a, b) => {
-            if(a.response?.assertedDate ?? null)
-                return a.response.assertedDate - b.response.assertedDate
+            if(a.resource?.assertedDate ?? null)
+                return a.resource.assertedDate - b.resource.assertedDate
             else
-                return a.response.onsetDateTime - b.response.onsetDateTime;
+                return a.resource.onsetDateTime - b.resource.onsetDateTime;
         });
 
         // iterate through response entries
         response.entry.forEach(entry => {
             // we are only interested in the most recent active condition
-            if (((entry.resource?.resourceType ?? "") === "Condition") &&
-                ((entry.resource?.clinicalStatus ?? "") === "active")) {
+            if (((entry.resource?.resourceType ?? '') === 'Condition') &&
+                ((entry.resource?.clinicalStatus ?? '') === 'active')) {
                 patient_condition = {display: getResourceItemDisplayName(entry.resource), patient: patient.data.id, data: entry.resource};
             }
         });
@@ -422,7 +449,7 @@ async function requestPatientCondition(request_url, patient) {
 */
 let test_select_items = [];
 let patient_observations = [];
-// let requestPatientObservations_recursion_depth = 0;  // for debugging recursion
+let requestPatientObservations_recursion_depth = 0;  // for debugging recursion
 async function requestPatientObservations(url, patient) {
     /*
     * Parameters:
@@ -461,7 +488,7 @@ async function requestPatientObservations(url, patient) {
     }
 
 
-    // requestPatientObservations_recursion_depth++;  // for debugging recursion
+    requestPatientObservations_recursion_depth++;  // for debugging recursion
     // console.log('Recursion Depth:', requestPatientObservations_recursion_depth); // for debugging recursion
     let request_url = url;
     // console.log('request_url', request_url);
@@ -470,15 +497,25 @@ async function requestPatientObservations(url, patient) {
         const response = await client.request(url, {});
         // console.log('requestPatientObservations response', response); // log the entire response to understand its structure
 
+        // handle if there are no resource entries
+
+
+        // handle if there are no resource entries
+        if(entryCountIsZero(response, 'requestPatientObservations', requestPatientObservations_recursion_depth)){
+            // TODO: put in some better user feedback
+            alert('The server did not return any diabetes-related observations for this patient.');
+            return;
+        }
+
         // iterate through response entries
         response.entry.forEach(entry => {
             // we are only interested in laboratory test results
-            if ((entry.resource?.resourceType ?? "") === "Observation" &&
-                (entry.resource?.category[0]?.coding[0]?.code ?? "") === 'laboratory') {
+            if ((entry.resource?.resourceType ?? '') === 'Observation' &&
+                (entry.resource?.category[0]?.coding[0]?.code ?? '') === 'laboratory') {
 
                 // get the options for the diagnostic tests select box
                 let display = getResourceItemDisplayName(entry.resource);
-                let new_item = {display: display, data: entry.resource?.code?.coding[0]?.code ?? ""};
+                let new_item = {display: display, data: entry.resource?.code?.coding[0]?.code ?? ''};
                 if (display && !isDuplicateTestType(test_select_items, new_item))
                     test_select_items.push(new_item);
 
@@ -494,7 +531,7 @@ async function requestPatientObservations(url, patient) {
         });
 
         // get the link to get the next page of patient data
-        const nextLink = (response.link || []).find(l => l.relation === "next");
+        const nextLink = (response.link || []).find(l => l.relation === 'next');
         request_url = nextLink ? nextLink.url : '';
         // console.log(request_url);
 
@@ -502,7 +539,7 @@ async function requestPatientObservations(url, patient) {
             await requestPatientObservations(request_url, patient); // recursion to get next page
         } else {
             // console.log('Recursion Terminated'); // for debugging recursion
-            // requestPatientObservations_recursion_depth = 0; // reset recursion depth
+            requestPatientObservations_recursion_depth = 0; // reset recursion depth
 
             // handle items for the select box
             test_select_items.sort((a, b) => a.display.localeCompare(b.display));
@@ -530,9 +567,9 @@ async function requestPatientObservations(url, patient) {
 *   url: type string: request url to send to FHIR client
 */
 let patients_select_items = [];
-// let requestPatients_recursion_depth = 0; // for debugging recursion
+let requestPatients_recursion_depth = 0; // for debugging recursion
 async function requestPatients(url) {
-    // requestPatients_recursion_depth++; // for debugging recursion
+    requestPatients_recursion_depth++; // for debugging recursion
     // console.log('Recursion Depth:', requestPatients_recursion_depth); // for debugging recursion
     let request_url = url;
 
@@ -540,10 +577,18 @@ async function requestPatients(url) {
         const response = await client.request(url, {});
         // console.log('requestPatients response (single iteration)', response); // log the entire response to understand its structure
 
+
+        // handle if there are no resource entries
+        if(entryCountIsZero(response, 'requestPatients', requestPatients_recursion_depth)){
+            // TODO: put in some better user feedback
+            alert('The server did not return any patients with diabetes-related conditions.');
+            return;
+        }
+
         // iterate through response entries
         response.entry.forEach(entry => {
             // only look at patients (which should be all of them as the request was a Patients request
-            if ((entry.resource?.resourceType ?? "") === "Patient") {
+            if ((entry.resource?.resourceType ?? '') === 'Patient') {
                 // filter out dead people
                 const deceased = (entry.resource?.deceasedBoolean ?? false) ||
                     (entry.resource?.deceasedDateTime ?? '').length > 0;
@@ -557,14 +602,14 @@ async function requestPatients(url) {
         });
 
         // get the link to get the next page of patient data
-        const nextLink = (response.link || []).find(l => l.relation === "next");
+        const nextLink = (response.link || []).find(l => l.relation === 'next');
         request_url = nextLink ? nextLink.url : '';
 
         if (request_url) {
             await requestPatients(request_url); // recursion to get next page
         } else {
             // console.log('Recursion Terminated'); // for debugging recursion
-            // requestPatients_recursion_depth = 0; // reset recursion depth
+            requestPatients_recursion_depth = 0; // reset recursion depth
 
             // put in alphabetical order
             patients_select_items.sort((a, b) => a.display.localeCompare(b.display));
