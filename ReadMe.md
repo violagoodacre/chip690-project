@@ -1,6 +1,6 @@
 # CHIP690-297-Spring2025 Project
 
-This is my CHIP-690-297-Spring2025 project. It dispalys diabetes diagnostic test results for a specific patient. Patients with diabetes or prediabetes were selected using a sample (non-exhaustive) list of SNOMED CT codes. Test results were obtained using LOINC codes. The display uses HighCharts. 
+This is my CHIP-690-297-Spring2025 project. It dispalys diabetes diagnostic test results for a specific patient. Patients with diabetes or prediabetes were selected using a sample (non-exhaustive) list of SNOMED CT codes. Test results were obtained using LOINC codes. The display uses HighCharts. You can view the demo video here: [https://www.youtube.com/watch?v=EtyQ90d409o](https://www.youtube.com/watch?v=EtyQ90d409o).
 
 ## How to use:
 1. Open in a web browser ([https://violagoodacre.github.io/chip690-project/](https://violagoodacre.github.io/chip690-project/)).
