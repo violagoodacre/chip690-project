@@ -19,3 +19,7 @@ If you want to view it in SmartHealthIT, here are the steps:
 1. Move the infomation area above the chart to be to the side of the chart (left or right).
 2. Get and display the Condition information when the patient is selected, not when the test type is selected.
 3. Add to the information area Patient information.
+4. Improve aesthetics.
+5. Improve user feedback.
+6. Use valuesets that automatically fetch child codes rather than hard-coding the code values.
+7. Use the SmartHealthIT selected patient when using the SmartHealthIT launch, and use the patients combo box when viewing as a stand-alone website.
